@@ -79,6 +79,7 @@ export type Database = {
         Update: {
           full_name?: string; status?: string; department_id?: string | null;
           role_id?: string | null; photo_url?: string | null; updated_at?: string | null;
+          termination_date?: string | null; email?: string | null; phone?: string | null;
         }
         Relationships: any[]
       }
