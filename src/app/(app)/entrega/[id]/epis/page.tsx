@@ -26,7 +26,7 @@ export default function EpisColaboradorPage() {
   const router = useRouter();
   const params = useParams();
   const employeeId = params.id as string;
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   const [employee, setEmployee] = useState<any>(null);
   const [requiredEpis, setRequiredEpis] = useState<any[]>([]);
@@ -75,7 +75,7 @@ export default function EpisColaboradorPage() {
       setStock(stockRes.data ?? []);
       setLoading(false);
     })();
-  }, [employeeId]);
+  }, [employeeId, supabase]);
 
   function toggleEpi(epi: any, stockItem: any) {
     const key = epi.id;

@@ -9,7 +9,6 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 
 // SSR safe
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SignatureCanvasDynamic = dynamic(
   () => import("react-signature-canvas"),
   { ssr: false }
@@ -39,7 +38,6 @@ export default function AssinarPage() {
   const employeeId = params.id;
 
   const supabase = createClient();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sigRef = useRef<any>(null); // react-signature-canvas generic ref
 
   const [employee, setEmployee] = useState<EmployeeWithRelations | null>(null);
@@ -80,7 +78,6 @@ export default function AssinarPage() {
       if (!user) throw new Error("Não autenticado");
 
       // Pegar warehouse padrão
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fromWarehouses: any = supabase.from("warehouses");
       const { data: warehouse, error: warehouseError } = await fromWarehouses
         .select("id")
@@ -92,7 +89,6 @@ export default function AssinarPage() {
       }
 
       // Criar entrega
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fromDeliveries: any = supabase.from("deliveries");
       const { data: delivery, error: deliveryError } = await fromDeliveries
         .insert({
@@ -112,7 +108,6 @@ export default function AssinarPage() {
       if (deliveryError || !delivery) throw deliveryError;
 
       // Inserir itens
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fromDeliveryItems: any = supabase.from("delivery_items");
       await fromDeliveryItems.insert(
         items.map((item) => ({
@@ -135,7 +130,6 @@ export default function AssinarPage() {
           p_qty: item.quantity,
         });
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const fromStockMovements: any = supabase.from("stock_movements");
         await fromStockMovements.insert({
           stock_id: item.stockId,
@@ -163,7 +157,6 @@ export default function AssinarPage() {
         .getPublicUrl(signaturePath);
 
       // Registrar assinatura
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fromSignatures: any = supabase.from("signatures");
       await fromSignatures.insert({
         delivery_id: delivery.id,
@@ -179,7 +172,6 @@ export default function AssinarPage() {
         .eq("id", delivery.id);
 
       // Log de auditoria
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const fromAuditLogs: any = supabase.from("audit_logs");
       await fromAuditLogs.insert({
         table_name: "deliveries",
