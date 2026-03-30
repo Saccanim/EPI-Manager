@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { Building2, Building, BriefcaseBusiness, Network } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { OrganizationForms } from "@/components/admin/OrganizationForms";
 import {
   createCompanyAction,
   createDepartmentAction,
@@ -11,12 +11,35 @@ import {
 
 export const metadata: Metadata = { title: "Empresa e Unidades" };
 
+type CompanyOption = { id: string; name: string; cnpj: string | null };
+type UnitOption = {
+  id: string;
+  company_id: string;
+  name: string;
+  city: string | null;
+  state: string | null;
+  companies: { name: string } | null;
+};
+type DepartmentOption = {
+  id: string;
+  unit_id: string;
+  name: string;
+  units: { name: string } | null;
+};
+type RoleOption = {
+  id: string;
+  department_id: string | null;
+  name: string;
+  description: string | null;
+  departments: { name: string } | null;
+};
+
 export default async function AdminEmpresaPage({
   searchParams,
 }: {
   searchParams: Promise<{ message?: string; error?: string }>;
 }) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const resolvedParams = await searchParams;
   const message = resolvedParams.message ?? "";
   const error = resolvedParams.error ?? "";
@@ -29,13 +52,10 @@ export default async function AdminEmpresaPage({
       supabase.from("roles").select("id, department_id, name, description, departments(name)").order("name"),
     ]);
 
-  const companyOptions = (companies as Array<{ id: string; name: string; cnpj: string | null }>) ?? [];
-  const unitOptions =
-    (units as Array<{ id: string; name: string; city: string | null; state: string | null; companies: { name: string } | null }>) ?? [];
-  const departmentOptions =
-    (departments as Array<{ id: string; name: string; units: { name: string } | null }>) ?? [];
-  const roleOptions =
-    (roles as Array<{ id: string; name: string; description: string | null; departments: { name: string } | null }>) ?? [];
+  const companyOptions = (companies as unknown as CompanyOption[]) ?? [];
+  const unitOptions = (units as unknown as UnitOption[]) ?? [];
+  const departmentOptions = (departments as unknown as DepartmentOption[]) ?? [];
+  const roleOptions = (roles as unknown as RoleOption[]) ?? [];
 
   return (
     <div className="max-w-5xl space-y-5">
@@ -52,69 +72,24 @@ export default async function AdminEmpresaPage({
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-4">
-        <form action={createCompanyAction} className="card space-y-3">
-          <div className="flex items-center gap-2">
-            <Building2 className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-text-primary">Cadastrar empresa</h2>
-          </div>
-          <input name="name" className="input" placeholder="Nome da empresa" required />
-          <input name="cnpj" className="input" placeholder="CNPJ" />
-          <button type="submit" className="btn-primary w-full">Salvar empresa</button>
-        </form>
-
-        <form action={createUnitAction} className="card space-y-3">
-          <div className="flex items-center gap-2">
-            <Building className="w-4 h-4 text-success" />
-            <h2 className="text-sm font-semibold text-text-primary">Cadastrar unidade</h2>
-          </div>
-          <select name="company_id" className="input" defaultValue={companyOptions[0]?.id ?? ""} required>
-            {companyOptions.map((company) => (
-              <option key={company.id} value={company.id}>{company.name}</option>
-            ))}
-          </select>
-          <input name="name" className="input" placeholder="Nome da unidade" required />
-          <div className="grid grid-cols-2 gap-3">
-            <input name="city" className="input" placeholder="Cidade" />
-            <input name="state" className="input" placeholder="UF" maxLength={2} />
-          </div>
-          <button type="submit" className="btn-primary w-full">Salvar unidade</button>
-        </form>
-
-        <form action={createDepartmentAction} className="card space-y-3">
-          <div className="flex items-center gap-2">
-            <Network className="w-4 h-4 text-warning" />
-            <h2 className="text-sm font-semibold text-text-primary">Cadastrar departamento</h2>
-          </div>
-          <select name="unit_id" className="input" defaultValue={unitOptions[0]?.id ?? ""} required>
-            {unitOptions.map((unit) => (
-              <option key={unit.id} value={unit.id}>{unit.name}</option>
-            ))}
-          </select>
-          <input name="name" className="input" placeholder="Nome do departamento" required />
-          <button type="submit" className="btn-primary w-full">Salvar departamento</button>
-        </form>
-
-        <form action={createRoleAction} className="card space-y-3">
-          <div className="flex items-center gap-2">
-            <BriefcaseBusiness className="w-4 h-4 text-danger" />
-            <h2 className="text-sm font-semibold text-text-primary">Cadastrar função</h2>
-          </div>
-          <select name="department_id" className="input" defaultValue={departmentOptions[0]?.id ?? ""}>
-            {departmentOptions.map((department) => (
-              <option key={department.id} value={department.id}>{department.name}</option>
-            ))}
-          </select>
-          <input name="name" className="input" placeholder="Nome da função" required />
-          <input name="description" className="input" placeholder="Descrição" />
-          <button type="submit" className="btn-primary w-full">Salvar função</button>
-        </form>
-      </div>
+      <OrganizationForms
+        companies={companyOptions}
+        units={unitOptions}
+        departments={departmentOptions}
+        roles={roleOptions}
+        createCompanyAction={createCompanyAction}
+        createUnitAction={createUnitAction}
+        createDepartmentAction={createDepartmentAction}
+        createRoleAction={createRoleAction}
+      />
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="card">
           <h3 className="text-sm font-semibold text-text-primary mb-3">Empresas</h3>
           <div className="space-y-2">
+            {companyOptions.length === 0 && (
+              <p className="text-sm text-text-muted">Nenhuma empresa cadastrada.</p>
+            )}
             {companyOptions.map((company) => (
               <div key={company.id} className="rounded-lg border border-border px-3 py-2">
                 <div className="text-sm font-medium text-text-primary">{company.name}</div>
@@ -127,6 +102,9 @@ export default async function AdminEmpresaPage({
         <div className="card">
           <h3 className="text-sm font-semibold text-text-primary mb-3">Unidades e Departamentos</h3>
           <div className="space-y-2">
+            {unitOptions.length === 0 && (
+              <p className="text-sm text-text-muted">Nenhuma unidade cadastrada.</p>
+            )}
             {unitOptions.map((unit) => (
               <div key={unit.id} className="rounded-lg border border-border px-3 py-2">
                 <div className="text-sm font-medium text-text-primary">
@@ -150,6 +128,9 @@ export default async function AdminEmpresaPage({
         <div className="card lg:col-span-2">
           <h3 className="text-sm font-semibold text-text-primary mb-3">Funções</h3>
           <div className="grid md:grid-cols-2 gap-2">
+            {roleOptions.length === 0 && (
+              <p className="text-sm text-text-muted">Nenhuma função cadastrada.</p>
+            )}
             {roleOptions.map((role) => (
               <div key={role.id} className="rounded-lg border border-border px-3 py-2">
                 <div className="text-sm font-medium text-text-primary">{role.name}</div>
