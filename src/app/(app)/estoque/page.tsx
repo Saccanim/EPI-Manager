@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Estoque" };
 export default async function EstoquePage() {
   const supabase = await createClient();
 
-  const { data: stock } = await supabase
+  const { data } = await supabase
     .from("stock")
     .select(`
       *,
@@ -18,10 +18,12 @@ export default async function EstoquePage() {
     `)
     .order("quantity", { ascending: true });
 
-  const totalItems = stock?.length ?? 0;
-  const lowStock  = stock?.filter((s) => s.quantity <= s.min_quantity).length ?? 0;
-  const zeroStock = stock?.filter((s) => s.quantity === 0).length ?? 0;
-  const totalQty  = stock?.reduce((acc, s) => acc + s.quantity, 0) ?? 0;
+  const stock: any[] = data ?? [];
+
+  const totalItems = stock.length;
+  const lowStock = stock.filter((s) => s.quantity <= s.min_quantity).length;
+  const zeroStock = stock.filter((s) => s.quantity === 0).length;
+  const totalQty = stock.reduce((acc, s) => acc + s.quantity, 0);
 
   return (
     <div className="max-w-5xl space-y-5">
@@ -74,7 +76,7 @@ export default async function EstoquePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {stock?.map((item: any) => {
+              {stock.map((item: any) => {
                 const isLow  = item.quantity <= item.min_quantity && item.quantity > 0;
                 const isZero = item.quantity === 0;
                 return (
