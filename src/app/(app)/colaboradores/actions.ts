@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/types/database";
 
 type EmployeeStatus = Database["public"]["Tables"]["employees"]["Row"]["status"];
@@ -17,7 +17,7 @@ function asNullable(value: FormDataEntryValue | null) {
 }
 
 export async function createEmployeeAction(formData: FormData) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const employeesTable: any = supabase.from("employees");
 
   const payload: Database["public"]["Tables"]["employees"]["Insert"] = {
@@ -50,7 +50,7 @@ export async function createEmployeeAction(formData: FormData) {
 }
 
 export async function updateEmployeeStatusAction(formData: FormData) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const employeesTable: any = supabase.from("employees");
   const employeeId = asString(formData.get("employee_id"));
   const status = asString(formData.get("status")) as EmployeeStatus;
@@ -78,7 +78,7 @@ export async function updateEmployeeStatusAction(formData: FormData) {
 }
 
 export async function deleteEmployeeAction(formData: FormData) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const employeesTable: any = supabase.from("employees");
   const employeeId = asString(formData.get("employee_id"));
 
