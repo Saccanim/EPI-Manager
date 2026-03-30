@@ -2,6 +2,11 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  // Allow bypassing auth in dev environments where Edge fetch cannot reach Supabase
+  if (process.env.SKIP_AUTH_MIDDLEWARE === "true") {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -25,9 +30,18 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  let user: any = null;
+  try {
+    const {
+      data: { user: fetchedUser },
+    } = await supabase.auth.getUser();
+    user = fetchedUser;
+  } catch (err) {
+    // If the edge runtime cannot reach Supabase (proxy/firewall),
+    // avoid blocking navigation and let the client handle auth.
+    console.error("[middleware] supabase.auth.getUser failed", err);
+    return supabaseResponse;
+  }
 
   const { pathname } = request.nextUrl;
 
