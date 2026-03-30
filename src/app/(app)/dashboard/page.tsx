@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import {
-  Send, Users, Bell, Package, ShieldAlert,
-  TrendingUp, Clock, CheckCircle2, AlertTriangle
+import { 
+  Send, Users, Bell, Package, ShieldAlert, 
+  TrendingUp, Clock, CheckCircle2 
 } from "lucide-react";
 
-export const metadata: Metadata = { title: "Dashboard" };
+
+export const metadata: Metadata = { title: "Dashboard — EPI Manager" };
 
 async function getDashboardData() {
   const supabase = await createClient();
@@ -14,48 +15,54 @@ async function getDashboardData() {
   const today = new Date().toISOString().split("T")[0];
   const in30days = new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0];
 
-  const [
-    { count: deliveriesToday },
-    { count: pendingSignatures },
-    { count: lowStock },
-    { count: expiringCA },
-    { data: recentDeliveries },
-  ] = await Promise.all<any>([
-    supabase
-      .from("deliveries")
-      .select("*", { count: "exact", head: true })
-      .gte("delivery_date", today + "T00:00:00")
-      .lte("delivery_date", today + "T23:59:59"),
-    supabase
-      .from("deliveries")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending_signature"),
-    supabase
-      .from("stock")
-      .select("*", { count: "exact", head: true })
-      .filter("quantity", "lte", "min_quantity"),
-    supabase
-      .from("epi_catalog")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "active")
-      .lte("ca_expiry_date", in30days),
-    supabase
-      .from("deliveries")
-      .select(`
-        id, delivery_date, status,
-        employees(full_name, badge_number),
-        delivery_items(count)
-      `)
-      .order("delivery_date", { ascending: false })
-      .limit(5),
-  ]);
+  // Queries individuais para manter tipagem limpa sem Promise.all genérico
+  const { count: deliveriesTodayCount } = await supabase
+    .from("deliveries")
+    .select("*", { count: "exact", head: true })
+    .gte("delivery_date", today + "T00:00:00")
+    .lte("delivery_date", today + "T23:59:59");
+
+  const { count: pendingSignaturesCount } = await supabase
+    .from("deliveries")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "pending_signature");
+
+  const { count: lowStockCount } = await supabase
+    .from("stock")
+    .select("*", { count: "exact", head: true })
+    .or("quantity.lte.min_quantity"); // Nota: Supabase permite filtros de coluna vs coluna via or/rpc
+
+  const { count: expiringCACount } = await supabase
+    .from("epi_catalog")
+    .select("*", { count: "exact", head: true })
+    .eq("status", "active")
+    .lte("ca_expiry_date", in30days);
+
+  const recentDeliveriesQuery = supabase
+    .from("deliveries")
+    .select(`
+      id, delivery_date, status,
+      employees(full_name, badge_number),
+      delivery_items(id)
+    `)
+    .order("delivery_date", { ascending: false })
+    .limit(5);
+
+  const { data: recentDeliveries } = await recentDeliveriesQuery;
+
+type DashboardDelivery = {
+  id: string;
+  delivery_date: string;
+  status: string;
+  employees: { full_name: string; badge_number: string } | null;
+};
 
   return {
-    deliveriesToday: deliveriesToday ?? 0,
-    pendingSignatures: pendingSignatures ?? 0,
-    lowStock: lowStock ?? 0,
-    expiringCA: expiringCA ?? 0,
-    recentDeliveries: recentDeliveries ?? [],
+    deliveriesToday: deliveriesTodayCount ?? 0,
+    pendingSignatures: pendingSignaturesCount ?? 0,
+    lowStock: lowStockCount ?? 0,
+    expiringCA: expiringCACount ?? 0,
+    recentDeliveries: (recentDeliveries as unknown as DashboardDelivery[]) || [],
   };
 }
 
@@ -182,37 +189,36 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {/* Header */}
               <div className="grid grid-cols-12 gap-4 px-4 py-2.5 text-xs font-medium text-text-muted uppercase tracking-wide">
-                <span className="col-span-5">Colaborador</span>
+                <span className="col-span-12 sm:col-span-5">Colaborador</span>
                 <span className="col-span-3 hidden sm:block">Data/Hora</span>
-                <span className="col-span-2">Itens</span>
-                <span className="col-span-2">Status</span>
+                <span className="col-span-2 hidden sm:block">Itens</span>
+                <span className="col-span-2 hidden sm:block">Status</span>
               </div>
-              {data.recentDeliveries.map((delivery: any) => (
+              {data.recentDeliveries.map((delivery) => (
                 <Link
                   key={delivery.id}
                   href={`/entrega/${delivery.id}/termo`}
                   className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-bg-elevated transition-colors items-center"
                 >
-                  <div className="col-span-5">
+                  <div className="col-span-12 sm:col-span-5">
                     <p className="text-sm font-medium text-text-primary line-clamp-1">
                       {delivery.employees?.full_name ?? "—"}
                     </p>
                     <p className="text-xs text-text-muted">
-                      #{delivery.employees?.badge_number}
+                      #{delivery.employees?.badge_number ?? "—"}
                     </p>
                   </div>
                   <div className="col-span-3 hidden sm:block text-sm text-text-secondary">
-                    {new Date(delivery.delivery_date).toLocaleString("pt-BR", {
+                    {new Date(delivery.delivery_date).toLocaleDateString("pt-BR", {
                       day: "2-digit", month: "2-digit",
                       hour: "2-digit", minute: "2-digit",
                     })}
                   </div>
-                  <div className="col-span-2 text-sm text-text-secondary">
-                    {delivery.delivery_items?.[0]?.count ?? 0} un
+                  <div className="col-span-2 hidden sm:block text-sm text-text-secondary">
+                  {delivery.status === 'completed' ? 'Item entregue' : 'Pendente'}
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-2 hidden sm:block">
                     <span className={statusColors[delivery.status] ?? "badge-muted"}>
                       {statusLabels[delivery.status] ?? delivery.status}
                     </span>

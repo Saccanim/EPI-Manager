@@ -8,6 +8,37 @@ import {
 import { cn, formatDate, formatDateTime, getEmployeeStatusLabel, getExpiryStatus } from "@/lib/utils";
 import type { Metadata } from "next";
 
+type ProfileEmployee = {
+  id: string;
+  full_name: string;
+  badge_number: string;
+  cpf: string | null;
+  status: string;
+  hire_date: string | null;
+  units: { name: string; city: string | null; state: string | null } | null;
+  departments: { name: string } | null;
+  roles: { id: string; name: string } | null;
+};
+
+type ProfileDeliveryItem = {
+  id: string;
+  quantity: number;
+  ca_number: string;
+  ca_expiry_date: string;
+  is_exception: boolean;
+  epi_catalog: { name: string; category: string } | null;
+  epi_variants: { size_label: string } | null;
+};
+
+type ProfileDelivery = {
+  id: string;
+  status: string;
+  delivery_date: string;
+  exception_reason: string | null;
+  delivery_items: ProfileDeliveryItem[] | null;
+  signatures: { signed_at: string; type: string }[] | null;
+};
+
 export const metadata: Metadata = { title: "Perfil do Colaborador" };
 
 const statusBadge: Record<string, string> = {
@@ -39,7 +70,7 @@ export default async function ColaboradorPerfilPage({
   const supabase = await createClient();
   const { id } = await params;
 
-  const [empRes, deliveriesRes] = await Promise.all<any>([
+  const [empRes, deliveriesRes] = await Promise.all([
     supabase
       .from("employees")
       .select(`
@@ -49,7 +80,7 @@ export default async function ColaboradorPerfilPage({
         units(name, city, state)
       `)
       .eq("id", id)
-      .single(),
+      .single() as unknown as Promise<{ data: unknown }>,
     supabase
       .from("deliveries")
       .select(`
@@ -63,13 +94,13 @@ export default async function ColaboradorPerfilPage({
       `)
       .eq("employee_id", id)
       .order("delivery_date", { ascending: false })
-      .limit(20),
+      .limit(20) as unknown as Promise<{ data: unknown }>,
   ]);
 
   if (!empRes.data) notFound();
 
-  const emp = empRes.data as any;
-  const deliveries = (deliveriesRes.data ?? []) as any[];
+  const emp = empRes.data as unknown as ProfileEmployee;
+  const deliveries = (deliveriesRes.data as unknown as ProfileDelivery[]) ?? [];
 
   const canDeliver = emp.status === "active";
 
@@ -134,7 +165,7 @@ export default async function ColaboradorPerfilPage({
           </div>
         ) : (
           <div className="space-y-3">
-            {deliveries.map((d: any) => {
+            {deliveries.map((d) => {
               const items = d.delivery_items ?? [];
               return (
                 <Link
@@ -157,7 +188,7 @@ export default async function ColaboradorPerfilPage({
 
                   {/* Itens */}
                   <div className="space-y-1.5">
-                    {items.map((item: any) => {
+                    {items.map((item) => {
                       const expStatus = getExpiryStatus(item.ca_expiry_date);
                       return (
                         <div key={item.id} className="flex items-center justify-between gap-2">

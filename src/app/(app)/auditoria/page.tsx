@@ -1,8 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Shield, ChevronRight, Clock } from "lucide-react";
+import { Shield, Clock } from "lucide-react";
 import { cn, formatDateTime } from "@/lib/utils";
 import type { Metadata } from "next";
+import type { Database } from "@/lib/types/database";
+
+type AuditLog = Database["public"]["Tables"]["audit_logs"]["Row"];
 
 export const metadata: Metadata = { title: "Auditoria" };
 
@@ -92,7 +95,7 @@ export default async function AuditoriaPage({
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {logs.map((log: any) => (
+            {logs.map((log: AuditLog) => (
               <div
                 key={log.id}
                 className="px-4 py-3 hover:bg-bg-elevated transition-colors"

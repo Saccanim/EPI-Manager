@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { Search, ChevronRight, UserCheck, UserX } from "lucide-react";
+import { Search, ChevronRight, UserX } from "lucide-react";
 import { cn, getEmployeeStatusLabel } from "@/lib/utils";
 import type { Metadata } from "next";
+import { QueryData } from "@supabase/supabase-js";
 
 export const metadata: Metadata = { title: "Colaboradores" };
 
@@ -24,7 +25,7 @@ export default async function ColaboradoresPage({
   const q = resolvedParams.q ?? "";
   const statusFilter = resolvedParams.status ?? "";
 
-  let query = supabase
+  const employeesQuery = supabase
     .from("employees")
     .select(`
       id, full_name, badge_number, cpf, status, hire_date,
@@ -34,14 +35,27 @@ export default async function ColaboradoresPage({
     .order("full_name")
     .limit(100);
 
+  let finalQuery = employeesQuery;
   if (q) {
-    query = query.or(`full_name.ilike.%${q}%,badge_number.ilike.%${q}%`);
+    finalQuery = finalQuery.or(`full_name.ilike.%${q}%,badge_number.ilike.%${q}%`);
   }
   if (statusFilter) {
-    query = query.eq("status", statusFilter);
+    finalQuery = finalQuery.eq("status", statusFilter);
   }
 
-  const { data: employees } = await query;
+  type EmployeeQueryResult = {
+    id: string;
+    full_name: string;
+    badge_number: string;
+    cpf: string | null;
+    status: string;
+    hire_date: string | null;
+    departments: { name: string } | null;
+    roles: { name: string } | null;
+  };
+
+  const { data } = await finalQuery;
+  const employees = (data as unknown as EmployeeQueryResult[]) || [];
 
   const statusOptions = [
     { value: "", label: "Todos" },
@@ -110,7 +124,7 @@ export default async function ColaboradoresPage({
               <span className="col-span-1" />
             </div>
 
-            {employees.map((emp: any) => (
+            {employees.map((emp: EmployeeQueryResult) => (
               <Link
                 key={emp.id}
                 href={`/colaboradores/${emp.id}`}

@@ -39,7 +39,7 @@ export default function EpisColaboradorPage() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const [empRes, stockRes] = await Promise.all([
+      const [empRes, stockRes] = await Promise.all<any>([
         supabase
           .from("employees")
           .select(`

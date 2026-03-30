@@ -3,6 +3,28 @@ import { cn, formatDate, daysUntilExpiry } from "@/lib/utils";
 import { ShieldAlert, Package, Clock, AlertTriangle } from "lucide-react";
 import type { Metadata } from "next";
 
+type ExpiringCA = {
+  id: string;
+  name: string;
+  ca_number: string;
+  ca_expiry_date: string;
+  status: string;
+};
+
+type LowStockItem = {
+  id: string;
+  quantity: number;
+  min_quantity: number;
+  epi_catalog: { name: string } | null;
+  warehouses: { name: string } | null;
+};
+
+type PendingDelivery = {
+  id: string;
+  delivery_date: string;
+  employees: { full_name: string; badge_number: string } | null;
+};
+
 export const metadata: Metadata = { title: "Alertas" };
 
 export default async function AlertasPage() {
@@ -46,7 +68,7 @@ export default async function AlertasPage() {
       color: "text-warning",
       bg: "bg-warning/10",
       border: "border-warning/20",
-      items: (expiringCAs ?? []).map((epi: any) => {
+      items: ((expiringCAs as unknown as ExpiringCA[]) ?? []).map((epi) => {
         const days = daysUntilExpiry(epi.ca_expiry_date);
         const isExpired = days < 0;
         return {
@@ -67,10 +89,10 @@ export default async function AlertasPage() {
       color: "text-danger",
       bg: "bg-danger/10",
       border: "border-danger/20",
-      items: (lowStockItems ?? []).map((s: any) => ({
+      items: ((lowStockItems as unknown as LowStockItem[]) ?? []).map((s) => ({
         key: s.id,
-        title: (s.epi_catalog as any)?.name ?? "—",
-        subtitle: `${(s.warehouses as any)?.name} · Saldo: ${s.quantity} / Mín: ${s.min_quantity}`,
+        title: s.epi_catalog?.name ?? "—",
+        subtitle: `${s.warehouses?.name} · Saldo: ${s.quantity} / Mín: ${s.min_quantity}`,
         badge:
           s.quantity === 0
             ? { label: "Zerado", cls: "badge-danger" }
@@ -83,10 +105,10 @@ export default async function AlertasPage() {
       color: "text-primary",
       bg: "bg-primary/10",
       border: "border-primary/20",
-      items: (pendingDeliveries ?? []).map((d: any) => ({
+      items: ((pendingDeliveries as unknown as PendingDelivery[]) ?? []).map((d) => ({
         key: d.id,
-        title: (d.employees as any)?.full_name ?? "—",
-        subtitle: `Mat. ${(d.employees as any)?.badge_number} · ${new Date(d.delivery_date).toLocaleString("pt-BR")}`,
+        title: d.employees?.full_name ?? "—",
+        subtitle: `Mat. ${d.employees?.badge_number} · ${new Date(d.delivery_date).toLocaleString("pt-BR")}`,
         badge: { label: "Pend. assinatura", cls: "badge-warning" },
       })),
     },

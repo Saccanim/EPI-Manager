@@ -4,6 +4,8 @@ import { CheckCircle2, Download, Send, ArrowLeft, Printer } from "lucide-react";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/utils";
 import type { Metadata } from "next";
+import { QueryData } from "@supabase/supabase-js";
+import type { Database } from "@/lib/types/database";
 
 export const metadata: Metadata = { title: "Comprovante de Entrega" };
 
@@ -15,7 +17,7 @@ export default async function TermoPage({
   const supabase = await createClient();
   const { id: deliveryId } = await params;
 
-  const { data: delivery } = (await supabase
+  const deliveryQuery = supabase
     .from("deliveries")
     .select(`
       *,
@@ -29,14 +31,17 @@ export default async function TermoPage({
       signatures(signature_url, type, signed_at)
     `)
     .eq("id", deliveryId)
-    .single()) as any;
+    .single();
 
-  if (!delivery) notFound();
+  type DeliveryWithRelations = QueryData<typeof deliveryQuery>;
+  const { data: delivery, error } = await deliveryQuery as any; // Cast only for QueryData vs Postgrest error
 
-  const employee = delivery.employees as any;
-  const warehouse = delivery.warehouses as any;
-  const items = delivery.delivery_items as any[];
-  const signature = (delivery.signatures as any)?.[0];
+  if (error || !delivery) notFound();
+
+  const employee = delivery.employees;
+  const warehouse = delivery.warehouses;
+  const items = delivery.delivery_items;
+  const signature = delivery.signatures?.[0] || delivery.signatures;
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
@@ -88,7 +93,7 @@ export default async function TermoPage({
             Itens entregues
           </p>
           <div className="divide-y divide-border">
-            {items.map((item: any) => (
+            {items?.map((item: any) => (
               <div key={item.id} className="flex items-center justify-between py-2.5">
                 <div>
                   <p className="text-sm font-medium text-text-primary">
